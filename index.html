@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ホロドリ アクティブスキル タイムライン</title>
+<style>
+:root{--line:#d7dce2;--bg:#f4f6f8;--card:#fff;--text:#20242a;--accent:#5b8def}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif;color:var(--text);background:var(--bg)}
+main{max-width:1500px;margin:auto;padding:20px}
+h1{font-size:24px;margin:0 0 16px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.controls{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+label{font-weight:600}
+select,input{font:inherit;padding:7px 9px;border:1px solid #bbb;border-radius:7px;background:#fff}
+input[type=number]{width:70px}
+button{font:inherit;padding:8px 13px;border:0;border-radius:7px;background:#333;color:#fff;cursor:pointer}
+button.secondary{background:#777}
+
+/* ホロメン選択プルダウン幅を小さく調整 (130px) */
+.team-row{display:flex;gap:8px;align-items:center;margin:9px 0;flex-wrap:wrap}
+.team-row .slot{text-align:center;font-weight:700;width:24px}
+.team-row select.member-select{width:130px;font-size:12px;padding:5px}
+.team-row select.reduction-select{width:70px;font-size:12px;padding:5px}
+.team-row .inline{display:flex;gap:4px;align-items:center}
+.small{font-size:11px;color:#666}
+
+#timelineWrap{overflow-x:auto}
+#timeline{position:relative;min-width:1050px}
+.axis{height:42px;border-bottom:2px solid #333;position:relative;margin-left:125px}
+.tick{position:absolute;bottom:0;border-left:1px solid #888;height:9px}
+.tick-label{position:absolute;top:14px;transform:translateX(-50%);font-size:11px}
+.row{height:64px;position:relative;border-bottom:1px solid #e5e7eb}
+.row.sp-row{background-color:#fffbeb}
+.rowname{position:absolute;left:0;width:118px;top:20px;font-weight:700;font-size:13px}
+.lane{position:absolute;left:125px;right:0;top:0;height:64px}
+.bar{position:absolute;top:17px;height:26px;border-radius:5px;background:#6a9df7;opacity:.82;min-width:2px}
+.bar.sp-bar{background:#f59e0b;opacity:.9}
+.event{position:absolute;top:45px;transform:translateX(-50%);font-size:10px;white-space:nowrap}
+.note{font-size:12px;color:#555;line-height:1.6}
+
+/* SPスキル5回分入力エリア */
+.sp-panel{background:#fef3c7;padding:12px;border-radius:8px;border:1px solid #fde68a;margin-top:10px}
+.sp-title{font-weight:bold;margin-bottom:8px;font-size:14px;color:#b45309}
+.sp-grid{display:flex;flex-wrap:wrap;gap:10px 16px}
+.sp-item{display:flex;align-items:center;gap:6px;font-size:12px;background:#fff;padding:6px 10px;border-radius:6px;border:1px solid #fcd34d}
+.sp-item input[type=number]{width:60px;padding:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>ホロドリ アクティブスキル タイムライン</h1>
+
+<div class="panel">
+  <div class="controls">
+    <label>曲の長さ <input id="songLength" type="number" value="118" min="1" step="0.1"> 秒</label>
+    <button class="secondary" onclick="resetTeam()">5枠をリセット</button>
+  </div>
+  
+  <div class="sp-panel">
+    <div class="sp-title">⭐ SPスキル設定（最大5回個別設定）</div>
+    <div class="sp-grid">
+      <div class="sp-item">
+        <b>1回目:</b>
+        開始 <input id="sp1_start" type="number" value="15" step="0.1">s
+        持続 <input id="sp1_dur" type="number" value="8" step="0.1">s
+      </div>
+      <div class="sp-item">
+        <b>2回目:</b>
+        開始 <input id="sp2_start" type="number" value="45" step="0.1">s
+        持続 <input id="sp2_dur" type="number" value="8" step="0.1">s
+      </div>
+      <div class="sp-item">
+        <b>3回目:</b>
+        開始 <input id="sp3_start" type="number" value="75" step="0.1">s
+        持続 <input id="sp3_dur" type="number" value="8" step="0.1">s
+      </div>
+      <div class="sp-item">
+        <b>4回目:</b>
+        開始 <input id="sp4_start" type="number" value="105" step="0.1">s
+        持続 <input id="sp4_dur" type="number" value="8" step="0.1">s
+      </div>
+      <div class="sp-item">
+        <b>5回目:</b>
+        開始 <input id="sp5_start" type="number" value="" step="0.1" placeholder="未設定">s
+        持続 <input id="sp5_dur" type="number" value="" step="0.1" placeholder="未設定">s
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div id="team"></div>
+</div>
+
+<div class="panel">
+  <div id="timelineWrap"><div id="timeline"></div></div>
+</div>
+
+<div class="panel note">
+<b>使用方法</b><br>
+・SPスキルの発動箇所（1回目〜5回目）ごとに「開始秒数」と「持続秒数」を個別に指定可能です（空欄にするとその回は非表示になります）。<br>
+・ホロメン選択プルダウンの幅をコンパクトに調整しました。
+</div>
+</main>
+
+<script>
+const DB = [{"name": "轟はじめ", "variants": [{"star": 4, "label": "轟はじめ（☆4）", "interval": 27, "duration": 11}, {"star": 5, "label": "轟はじめ（☆5）", "interval": 26, "duration": 9}]}, {"name": "儒烏風亭らでん", "variants": [{"star": 4, "label": "儒烏風亭らでん（☆4）", "interval": 16, "duration": 5}, {"star": 5, "label": "儒烏風亭らでん（☆5）", "interval": 22, "duration": 8}]}, {"name": "一条莉々華", "variants": [{"star": 4, "label": "一条莉々華（☆4）", "interval": 30, "duration": 11}, {"star": 5, "label": "一条莉々華（☆5）", "interval": 30, "duration": 11}]}, {"name": "音乃瀬奏", "variants": [{"star": 5, "label": "音乃瀬奏（☆5・潮風にのせる、笑顔のハーモニー）", "interval": 23, "duration": 8}, {"star": 4, "label": "音乃瀬奏（☆4）", "interval": 25, "duration": 10}, {"star": 5, "label": "音乃瀬奏（☆5）", "interval": 27, "duration": 12}]}, {"name": "モココ・アビスガード", "variants": [{"star": 4, "label": "モココ・アビスガード（☆4）", "interval": 25, "duration": 8}, {"star": 5, "label": "モココ・アビスガード（☆5）", "interval": 25, "duration": 8}]}, {"name": "フワワ・アビスガード", "variants": [{"star": 4, "label": "フワワ・アビスガード（☆4）", "interval": 30, "duration": 11}, {"star": 5, "label": "フワワ・アビスガード（☆5）", "interval": 20, "duration": 8}]}, {"name": "ネリッサ・レイヴンクロフト", "variants": [{"star": 5, "label": "ネリッサ・レイヴンクロフト（☆5）", "interval": 15, "duration": 7}]}, {"name": "古石ビジュー", "variants": [{"star": 5, "label": "古石ビジュー（☆5）", "interval": 27, "duration": 9}]}, {"name": "シオリ・ノヴェラ", "variants": [{"star": 5, "label": "シオリ・ノヴェラ（☆5）", "interval": 32, "duration": 11}]}, {"name": "ハコス・ベールズ", "variants": [{"star": 5, "label": "ハコス・ベールズ（☆5）", "interval": 25, "duration": 11}]}, {"name": "オーロ・クロニー", "variants": [{"star": 5, "label": "オーロ・クロニー（☆5）", "interval": 33, "duration": 12}]}, {"name": "IRyS", "variants": [{"star": 5, "label": "IRyS（☆5）", "interval": 25, "duration": 11}]}, {"name": "一伊那尓栖", "variants": [{"star": 5, "label": "一伊那尓栖（☆5）", "interval": 32, "duration": 14}]}, {"name": "小鳥遊キアラ", "variants": [{"star": 5, "label": "小鳥遊キアラ（☆5）", "interval": 23, "duration": 8}]}, {"name": "森カリオペ", "variants": [{"star": 5, "label": "森カリオペ（☆5）", "interval": 33, "duration": 11}]}, {"name": "こぼ・かなえる", "variants": [{"star": 5, "label": "こぼ・かなえる（☆5）", "interval": 15, "duration": 6}]}, {"name": "カエラ・コヴァルスキア", "variants": [{"star": 5, "label": "カエラ・コヴァルスキア（☆5）", "interval": 19, "duration": 7}]}, {"name": "ベスティア・ゼータ", "variants": [{"star": 5, "label": "ベスティア・ゼータ（☆5）", "interval": 25, "duration": 11}]}, {"name": "パヴォリア・レイネ", "variants": [{"star": 5, "label": "パヴォリア・レイネ（☆5）", "interval": 29, "duration": 10}]}, {"name": "アーニャ・メルフィッサ", "variants": [{"star": 5, "label": "アーニャ・メルフィッサ（☆5）", "interval": 24, "duration": 10}]}, {"name": "クレイジー・オリー", "variants": [{"star": 5, "label": "クレイジー・オリー（☆5）", "interval": 25, "duration": 10}]}, {"name": "アイラニ・イオフィフティーン", "variants": [{"star": 5, "label": "アイラニ・イオフィフティーン（☆5）", "interval": 17, "duration": 6}]}, {"name": "ムーナ・ホシノヴァ", "variants": [{"star": 4, "label": "ムーナ・ホシノヴァ（☆4）", "interval": 25, "duration": 8}, {"star": 5, "label": "ムーナ・ホシノヴァ（☆5）", "interval": 30, "duration": 11}]}, {"name": "アユンダ・リス", "variants": [{"star": 4, "label": "アユンダ・リス（☆4）", "interval": 23, "duration": 10}, {"star": 5, "label": "アユンダ・リス（☆5）", "interval": 34, "duration": 15}]}, {"name": "風真いろは", "variants": [{"star": 4, "label": "風真いろは（☆4）", "interval": 29, "duration": 9}, {"star": 5, "label": "風真いろは（☆5）", "interval": 30, "duration": 11}]}, {"name": "博衣こより", "variants": [{"star": 4, "label": "博衣こより（☆4）", "interval": 22, "duration": 9}, {"star": 5, "label": "博衣こより（☆5）", "interval": 23, "duration": 8}]}, {"name": "鷹嶺ルイ", "variants": [{"star": 4, "label": "鷹嶺ルイ（☆4）", "interval": 25, "duration": 8}, {"star": 5, "label": "鷹嶺ルイ（☆5）", "interval": 21, "duration": 8}]}, {"name": "ラプラス・ダークネス", "variants": [{"star": 4, "label": "ラプラス・ダークネス（☆4）", "interval": 32, "duration": 11}, {"star": 5, "label": "ラプラス・ダークネス（☆5）", "interval": 18, "duration": 6}]}, {"name": "尾丸ポルカ", "variants": [{"star": 4, "label": "尾丸ポルカ（☆4）", "interval": 26, "duration": 10}, {"star": 5, "label": "尾丸ポルカ（☆5）", "interval": 21, "duration": 8}]}, {"name": "獅白ぼたん", "variants": [{"star": 4, "label": "獅白ぼたん（☆4）", "interval": 30, "duration": 11}, {"star": 5, "label": "獅白ぼたん（☆5）", "interval": 27, "duration": 9}]}, {"name": "桃鈴ねね", "variants": [{"star": 5, "label": "桃鈴ねね（☆5）", "interval": 26, "duration": 9}]}, {"name": "雪花ラミィ", "variants": [{"star": 5, "label": "雪花ラミィ（☆5）", "interval": 23, "duration": 8}]}, {"name": "姫森ルーナ", "variants": [{"star": 5, "label": "姫森ルーナ（☆5）", "interval": 29, "duration": 10}]}, {"name": "常闇トワ", "variants": [{"star": 5, "label": "常闇トワ（☆5）", "interval": 19, "duration": 8}]}, {"name": "角巻わため", "variants": [{"star": 5, "label": "角巻わため（☆5・真夏のもふもふフロートタイム）", "interval": 35, "duration": 12}, {"star": 5, "label": "角巻わため（☆5）", "interval": 15, "duration": 6}]}, {"name": "宝鐘マリン", "variants": [{"star": 5, "label": "宝鐘マリン（☆5）", "interval": 23, "duration": 8}]}, {"name": "白銀ノエル", "variants": [{"star": 5, "label": "白銀ノエル（☆5・波まとうゆるふわKnight）", "interval": 21, "duration": 7}, {"star": 4, "label": "白銀ノエル（☆4）", "interval": 29, "duration": 12}, {"star": 5, "label": "白銀ノエル（☆5）", "interval": 19, "duration": 7}]}, {"name": "不知火フレア", "variants": [{"star": 5, "label": "不知火フレア（☆5・sparks sunset）", "interval": 33, "duration": 11}, {"star": 4, "label": "不知火フレア（☆4）", "interval": 20, "duration": 7}, {"star": 5, "label": "不知火フレア（☆5）", "interval": 16, "duration": 6}]}, {"name": "兎田ぺこら", "variants": [{"star": 5, "label": "兎田ぺこら（☆5）", "interval": 30, "duration": 12}]}, {"name": "戌神ころね", "variants": [{"star": 4, "label": "戌神ころね（☆4）", "interval": 18, "duration": 7}, {"star": 5, "label": "戌神ころね（☆5）", "interval": 17, "duration": 6}]}, {"name": "猫又おかゆ", "variants": [{"star": 4, "label": "猫又おかゆ（☆4）", "interval": 25, "duration": 10}, {"star": 5, "label": "猫又おかゆ（☆5）", "interval": 25, "duration": 10}]}, {"name": "大神ミオ", "variants": [{"star": 5, "label": "大神ミオ（☆5）", "interval": 27, "duration": 9}]}, {"name": "大空スバル", "variants": [{"star": 5, "label": "大空スバル（☆5・Energeticスプラッシュ！）", "interval": 17, "duration": 7}, {"star": 5, "label": "大空スバル（☆5）", "interval": 34, "duration": 12}]}, {"name": "癒月ちょこ", "variants": [{"star": 4, "label": "癒月ちょこ（☆4）", "interval": 28, "duration": 10}, {"star": 5, "label": "癒月ちょこ（☆5）", "interval": 20, "duration": 7}]}, {"name": "百鬼あやめ", "variants": [{"star": 4, "label": "百鬼あやめ（☆4）", "interval": 29, "duration": 9}, {"star": 5, "label": "百鬼あやめ（☆5）", "interval": 29, "duration": 10}]}, {"name": "夏色まつり", "variants": [{"star": 5, "label": "夏色まつり（☆5）", "interval": 23, "duration": 8}]}, {"name": "白上フブキ", "variants": [{"star": 5, "label": "白上フブキ（☆5）", "interval": 30, "duration": 11}]}, {"name": "赤井はあと", "variants": [{"star": 4, "label": "赤井はあと（☆4）", "interval": 24, "duration": 10}, {"star": 5, "label": "赤井はあと（☆5）", "interval": 19, "duration": 7}]}, {"name": "アキ・ローゼンタール", "variants": [{"star": 4, "label": "アキ・ローゼンタール（☆4）", "interval": 23, "duration": 10}, {"star": 5, "label": "アキ・ローゼンタール（☆5）", "interval": 21, "duration": 8}]}, {"name": "星街すいせい", "variants": [{"star": 4, "label": "星街すいせい（☆4）", "interval": 31, "duration": 10}, {"star": 5, "label": "星街すいせい（☆5）", "interval": 29, "duration": 10}]}, {"name": "さくらみこ", "variants": [{"star": 4, "label": "さくらみこ（☆4）", "interval": 23, "duration": 10}, {"star": 5, "label": "さくらみこ（☆5）", "interval": 15, "duration": 6}]}, {"name": "AZKi", "variants": [{"star": 4, "label": "AZKi（☆4）", "interval": 16, "duration": 5}, {"star": 5, "label": "AZKi（☆5）", "interval": 20, "duration": 7}]}, {"name": "ロボ子さん", "variants": [{"star": 4, "label": "ロボ子さん（☆4）", "interval": 24, "duration": 10}, {"star": 5, "label": "ロボ子さん（☆5）", "interval": 18, "duration": 8}]}, {"name": "ときのそら", "variants": [{"star": 4, "label": "ときのそら（☆4）", "interval": 26, "duration": 10}, {"star": 5, "label": "ときのそら（☆5）", "interval": 24, "duration": 10}]}];
+
+const FREE = { name:"フリー", variants:[{ star:0, label:"フリー", interval:30, duration:10 }] };
+
+const CARDS = [];
+for(const m of DB) for(const v of m.variants) CARDS.push({...v, holomem:m.name});
+CARDS.push({...FREE.variants[0], holomem:"フリー"});
+
+let team = [
+ {card:null,reduction:0},
+ {card:null,reduction:0},
+ {card:null,reduction:0},
+ {card:null,reduction:0},
+ {card:null,reduction:0}
+];
+
+function cardOptions(selected){
+  let html='<option value="">-- ホロメン --</option>';
+  for(let i=0;i<CARDS.length;i++){
+    const c=CARDS[i];
+    html+=`<option value="${i}" ${String(i)===String(selected)?'selected':''}>${c.label}</option>`;
+  }
+  return html;
+}
+
+function setCard(i,v){team[i].card=v===''?null:Number(v);renderTeam();}
+function setReduction(i,v){team[i].reduction=Number(v);draw();}
+function resetTeam(){team=[0,1,2,3,4].map(()=>({card:null,reduction:0}));renderTeam();}
+
+function renderTeam(){
+  const el=document.getElementById('team');
+  el.innerHTML='';
+  team.forEach((m,i)=>{
+    const c=m.card===null?null:CARDS[m.card];
+    const row=document.createElement('div');
+    row.className='team-row';
+    row.innerHTML=`
+      <div class="slot">${i+1}</div>
+      <select class="member-select" onchange="setCard(${i},this.value)">${cardOptions(m.card)}</select>
+      <select class="reduction-select" onchange="setReduction(${i},this.value)">
+        <option value="0" ${m.reduction===0?'selected':''}>0%</option>
+        <option value="4" ${m.reduction===4?'selected':''}>4%</option>
+        <option value="8" ${m.reduction===8?'selected':''}>8%</option>
+        <option value="12" ${m.reduction===12?'selected':''}>12%</option>
+      </select>
+      <div class="inline"><span class="small">間隔</span><input type="number" step="0.01" value="${c?c.interval:''}" ${!c?'disabled':''} onchange="editData(${i},'interval',this.value)"></div>
+      <div class="inline"><span class="small">持続</span><input type="number" step="0.01" value="${c?c.duration:''}" ${!c?'disabled':''} onchange="editData(${i},'duration',this.value)"></div>
+    `;
+    el.appendChild(row);
+  });
+  draw();
+}
+
+function editData(i,key,value){
+  if(team[i].card===null)return;
+  const c=CARDS[team[i].card];
+  c[key]=Number(value);
+  draw();
+}
+
+function draw(){
+  const song=Number(document.getElementById('songLength').value)||118;
+  
+  // SPスキル5箇所分を取得
+  const spItems = [];
+  for(let i=1; i<=5; i++){
+    const startVal = document.getElementById(`sp${i}_start`).value;
+    const durVal = document.getElementById(`sp${i}_dur`).value;
+    if(startVal !== "" && durVal !== ""){
+      const start = parseFloat(startVal);
+      const dur = parseFloat(durVal);
+      if(!isNaN(start) && !isNaN(dur) && start <= song){
+        spItems.push({ start, dur });
+      }
+    }
+  }
+
+  const width=1100;
+  let h='<div class="axis">';
+  for(let t=0;t<=song;t+=10){
+    const x=(t/song)*width;
+    h+=`<div class="tick" style="left:${x}px"></div><div class="tick-label" style="left:${x}px">${t}s</div>`;
+  }
+  h+='</div>';
+
+  // --- SPスキルレーン ---
+  h+=`<div class="row sp-row"><div class="rowname" style="color:#d97706">⭐ SPスキル</div><div class="lane">`;
+  spItems.forEach(sp => {
+    const x=(sp.start/song)*width;
+    const bw=(sp.dur/song)*width;
+    h+=`<div class="bar sp-bar" style="left:${x}px;width:${bw}px" title="SPスキル: ${sp.start}s ～ ${sp.start+sp.dur}s"></div>`;
+    h+=`<div class="event" style="left:${x}px">${sp.start}s</div>`;
+  });
+  h+='</div></div>';
+
+  // --- チームホロメンレーン ---
+  team.forEach((m,i)=>{
+    const c=m.card===null?null:CARDS[m.card];
+    h+=`<div class="row"><div class="rowname">${c?c.label:'未選択'}</div><div class="lane">`;
+    if(c){
+      const raw=c.interval;
+      const dur=c.duration;
+      const interval=raw*(1-m.reduction/100);
+      if(interval>0){
+        for(let t=interval;t<=song+1e-9;t+=interval){
+          const x=(t/song)*width;
+          const bw=(dur/song)*width;
+          h+=`<div class="bar" style="left:${x}px;width:${bw}px" title="${c.label}: ${t.toFixed(2)}s ～ ${(t+dur).toFixed(2)}s"></div>`;
+          h+=`<div class="event" style="left:${x}px">${t.toFixed(2)}s</div>`;
+        }
+      }
+    }
+    h+='</div></div>';
+  });
+  document.getElementById('timeline').innerHTML=h;
+}
+
+document.getElementById('songLength').addEventListener('input', draw);
+for(let i=1; i<=5; i++){
+  document.getElementById(`sp${i}_start`).addEventListener('input', draw);
+  document.getElementById(`sp${i}_dur`).addEventListener('input', draw);
+}
+
+renderTeam();
+</script>
+</body>
+</html>
