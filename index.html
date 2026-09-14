@@ -58,7 +58,7 @@ footer{text-align:center;margin-top:20px;padding:10px;font-size:13px;color:#666}
 .counter-box{display:inline-block;background:#333;color:#fff;padding:4px 10px;border-radius:4px;font-weight:bold;font-family:monospace}
 
 /* Google翻訳枠の調整用CSS */
-.translate-wrap{margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.translate-wrap{margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -69,6 +69,7 @@ footer{text-align:center;margin-top:20px;padding:10px;font-size:13px;color:#666}
 <div class="translate-wrap">
   <span style="font-size:13px;font-weight:bold">🌐 Language:</span>
   <div id="google_translate_element"></div>
+  <button class="secondary" style="padding:4px 8px;font-size:12px" onclick="resetToJapanese()">日本語に戻す</button>
 </div>
 
 <div class="panel">
@@ -145,7 +146,7 @@ footer{text-align:center;margin-top:20px;padding:10px;font-size:13px;color:#666}
     <li>
       Aスキルは基本的に「○○秒毎に□確率で～」と設定されています。<br>
       これは演奏開始から○○秒ごとにスキル発動の判定を行います。発動してもしなくても、次の判定はさらに○○秒後になります。<br>
-      （例）３０秒毎であれば、演奏開始から３０秒、６０秒、９0秒・・・といったタイミングで発動の判定が行われます。
+      （例）３０秒毎であれば、演奏開始から３０秒、６０秒、９０秒・・・といったタイミングで発動の判定が行われます。
     </li>
     <li>Aスキルは複数発動しても効果は重複しません。</li>
   </ul>
@@ -532,6 +533,13 @@ function draw(){
     h+='</div></div>';
   });
   document.getElementById('timeline').innerHTML=h;
+}
+
+// 原文（日本語）にリセットする関数
+function resetToJapanese() {
+  document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + document.domain + "; path=/;";
+  location.reload();
 }
 
 document.getElementById('songLength').addEventListener('input', draw);
